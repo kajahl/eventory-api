@@ -1,0 +1,42 @@
+services:
+  nestjs:
+    build: .
+    container_name: eventory_nestjs
+    restart: always
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+    depends_on:
+      - postgres
+    networks:
+      - eventory_network
+    ports:
+      - "3000:3000"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: eventory_postgres
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - eventory_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  eventory_network:
+    driver: bridge
