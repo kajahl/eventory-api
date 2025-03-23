@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UsersModule } from './modules/users/users.module';
+import UserEntity from './modules/users/entities/user.entity';
 
 @Module({
   imports: [
@@ -21,11 +23,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         database: configService.get<string>('DATABASE_NAME'),
         autoLoadEntities: true,
         synchronize: configService.get<boolean>('DATABASE_SYNCHRONIZE'),
-        entities: []
+        entities: [UserEntity],
       }),
     }),
+    UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService]
 })
 export class AppModule {}
