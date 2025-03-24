@@ -53,7 +53,13 @@ export class UsersService {
         return user;
     }
 
-    async find(user: Partial<UserEntity>): Promise<UserEntity | null> {
+    async getByEmail(email: string): Promise<UserEntity> {
+        const user = await this.userRepository.findOne({ where: { email } });
+        if (!user) throw new NotFoundException(`User with email ${email} not found`);
+        return user;
+    }
+
+    async find(user: Partial<UserEntity> | Partial<UserEntity>[]): Promise<UserEntity | null> {
         const found = this.userRepository.findOne({ where: user });
         if (!found) throw new NotFoundException(`User not found`);
         return found;
