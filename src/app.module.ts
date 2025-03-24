@@ -5,6 +5,10 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from './modules/users/users.module';
 import UserEntity from './modules/users/entities/user.entity';
+import { AuthModule } from './modules/auth/auth.module';
+import { RefreshTokenEntity } from './modules/auth/entities/RefreshToken.entity';
+import { AccessTokenEntity } from './modules/auth/entities/AccessToken.entity';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -23,12 +27,19 @@ import UserEntity from './modules/users/entities/user.entity';
         database: configService.get<string>('DATABASE_NAME'),
         autoLoadEntities: true,
         synchronize: configService.get<boolean>('DATABASE_SYNCHRONIZE'),
-        entities: [UserEntity],
+        entities: [
+            UserEntity,
+            RefreshTokenEntity, AccessTokenEntity
+        ],
       }),
     }),
+    ScheduleModule.forRoot({
+        cronJobs: true
+    }),
     UsersModule,
+    AuthModule
   ],
   controllers: [AppController],
-  providers: [AppService]
+  providers: [AppService],
 })
 export class AppModule {}
