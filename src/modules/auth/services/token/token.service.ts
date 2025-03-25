@@ -180,7 +180,10 @@ export class TokenService {
      * @returns The access token entity if found, otherwise null.
      */
     private async getAccessTokenByHash(hash: string): Promise<AccessTokenEntity | null> {
-        const accessToken = await this.accessTokenRepository.findOne({ where: { tokenHash: hash } });
+        const accessToken = await this.accessTokenRepository.findOne({ 
+            where: { tokenHash: hash } ,
+            relations: { relatedRefreshToken: true },
+        });
         return accessToken || null;
     }
 
@@ -190,7 +193,10 @@ export class TokenService {
      * @returns The refresh token entity if found, otherwise null.
      */
     private async getRefreshTokenByHash(hash: string): Promise<RefreshTokenEntity | null> {
-        const refreshToken = await this.refreshTokenRepository.findOne({ where: { tokenHash: hash } });
+        const refreshToken = await this.refreshTokenRepository.findOne({ 
+            where: { tokenHash: hash },
+            relations: { accessTokens: true },
+         });
         return refreshToken || null;
     }
 
@@ -378,5 +384,20 @@ export class TokenService {
         if (!accessToken) return false;
         await this.accessTokenRepository.remove(accessToken)
         return true;
+    }
+
+    async destroyRelatedTokens(anyToken: string) {
+        const tokenHash = this.hashToken(anyToken);
+
+        const accessToken = await this.getAccessTokenByHash(tokenHash);
+        if (accessToken) {
+            const relatedRefreshToken = accessToken.relatedRefreshToken;
+            if(!relatedRefreshToken) throw new InternalServerErrorException('Related refresh token not found');
+            return this.removeRefreshTokenByHash(relatedRefreshToken.tokenHash);
+        }
+
+        const refreshToken = await this.getRefreshTokenByHash(tokenHash);
+        if (!refreshToken) throw new UnauthorizedException('Invalid token');
+        return this.removeRefreshTokenByHash(tokenHash);
     }
 }

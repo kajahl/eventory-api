@@ -268,6 +268,7 @@ describe('TokenService', () => {
 
             expect(accessTokenRepository.findOne).toHaveBeenCalledWith({
                 where: { tokenHash: hashedToken },
+                relations: { relatedRefreshToken: true },
             });
             expect(result).toBe(mockAccessTokenEntity);
         });
@@ -290,6 +291,7 @@ describe('TokenService', () => {
 
             expect(refreshTokenRepository.findOne).toHaveBeenCalledWith({
                 where: { tokenHash: hashedToken },
+                relations: { accessTokens: true },
             });
             expect(result).toBe(mockRefreshTokenEntity);
         });
@@ -687,6 +689,79 @@ describe('TokenService', () => {
             expect(service['getAccessTokenByHash']).toHaveBeenCalledWith(hashedToken);
             expect(accessTokenRepository.remove).not.toHaveBeenCalled();
             expect(result).toBe(false);
+        });
+    });
+
+    describe('destroyRelatedTokens', () => {
+        it('should remove related refresh token when access token is provided', async () => {
+            const anyToken = 'mock-access-token';
+            const tokenHash = 'hashed-access-token';
+            const mockAccessTokenEntity = {
+                relatedRefreshToken: { tokenHash: 'hashed-refresh-token' },
+            } as any as AccessTokenEntity;
+    
+            jest.spyOn(service as any, 'hashToken').mockReturnValue(tokenHash);
+            jest.spyOn(service as any, 'getAccessTokenByHash').mockResolvedValue(mockAccessTokenEntity);
+            jest.spyOn(service as any, 'removeRefreshTokenByHash').mockResolvedValue(true);
+    
+            const result = await service.destroyRelatedTokens(anyToken);
+    
+            expect(service['hashToken']).toHaveBeenCalledWith(anyToken);
+            expect(service['getAccessTokenByHash']).toHaveBeenCalledWith(tokenHash);
+            expect(service['removeRefreshTokenByHash']).toHaveBeenCalledWith('hashed-refresh-token');
+            expect(result).toBe(true);
+        });
+    
+        it('should throw an error if related refresh token is not found', async () => {
+            const anyToken = 'mock-access-token';
+            const tokenHash = 'hashed-access-token';
+            const mockAccessTokenEntity = {
+                relatedRefreshToken: null,
+            } as any as AccessTokenEntity;
+    
+            jest.spyOn(service as any, 'hashToken').mockReturnValue(tokenHash);
+            jest.spyOn(service as any, 'getAccessTokenByHash').mockResolvedValue(mockAccessTokenEntity);
+    
+            await expect(service.destroyRelatedTokens(anyToken)).rejects.toThrow(
+                'Related refresh token not found',
+            );
+    
+            expect(service['hashToken']).toHaveBeenCalledWith(anyToken);
+            expect(service['getAccessTokenByHash']).toHaveBeenCalledWith(tokenHash);
+        });
+    
+        it('should remove refresh token when refresh token is provided', async () => {
+            const anyToken = 'mock-refresh-token';
+            const tokenHash = 'hashed-refresh-token';
+            const mockRefreshTokenEntity = {} as any as RefreshTokenEntity;
+    
+            jest.spyOn(service as any, 'hashToken').mockReturnValue(tokenHash);
+            jest.spyOn(service as any, 'getAccessTokenByHash').mockResolvedValue(null);
+            jest.spyOn(service as any, 'getRefreshTokenByHash').mockResolvedValue(mockRefreshTokenEntity);
+            jest.spyOn(service as any, 'removeRefreshTokenByHash').mockResolvedValue(true);
+    
+            const result = await service.destroyRelatedTokens(anyToken);
+    
+            expect(service['hashToken']).toHaveBeenCalledWith(anyToken);
+            expect(service['getAccessTokenByHash']).toHaveBeenCalledWith(tokenHash);
+            expect(service['getRefreshTokenByHash']).toHaveBeenCalledWith(tokenHash);
+            expect(service['removeRefreshTokenByHash']).toHaveBeenCalledWith(tokenHash);
+            expect(result).toBe(true);
+        });
+    
+        it('should throw an error if token is invalid', async () => {
+            const anyToken = 'invalid-token';
+            const tokenHash = 'hashed-invalid-token';
+    
+            jest.spyOn(service as any, 'hashToken').mockReturnValue(tokenHash);
+            jest.spyOn(service as any, 'getAccessTokenByHash').mockResolvedValue(null);
+            jest.spyOn(service as any, 'getRefreshTokenByHash').mockResolvedValue(null);
+    
+            await expect(service.destroyRelatedTokens(anyToken)).rejects.toThrow('Invalid token');
+    
+            expect(service['hashToken']).toHaveBeenCalledWith(anyToken);
+            expect(service['getAccessTokenByHash']).toHaveBeenCalledWith(tokenHash);
+            expect(service['getRefreshTokenByHash']).toHaveBeenCalledWith(tokenHash);
         });
     });
 });
