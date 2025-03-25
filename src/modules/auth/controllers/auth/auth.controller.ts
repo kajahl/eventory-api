@@ -35,7 +35,6 @@ export class AuthController {
         if (!token) throw new Error('Token is required');
 
         const accessToken = this.tokenService.regenerateAccessToken(token).catch(e => {
-            // TODO: Handle error properly
             throw new InternalServerErrorException(`Error regenerating access token: ${e.message}`);
         })
 

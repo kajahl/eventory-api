@@ -324,7 +324,7 @@ export class TokenService {
             throw new InternalServerErrorException('Something went wrong while removing access tokens');
         });
 
-        return true; //TODO: Opis i testy
+        return true;
     }
 
     /**
@@ -351,8 +351,6 @@ export class TokenService {
 
         // Related access tokens should be removed when refresh tokens are removed (cascade delete)
         // Only safety check
-        // await this.accessTokenRepository.delete({ relatedRefreshToken: refreshToken }); 
-        // //TODO: To generuje błędy, do sprawdzenia
         const remainingAccessTokens = await this.accessTokenRepository.find({ where: { relatedRefreshToken: refreshToken } });
         if (remainingAccessTokens.length > 0) await this.accessTokenRepository.remove(remainingAccessTokens).catch((e) => {
             throw new InternalServerErrorException('Something went wrong while removing access tokens');
