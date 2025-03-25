@@ -1,13 +1,23 @@
-import { BadRequestException, Body, Controller, Get, Inject, InternalServerErrorException, Post, Request, Response, UseGuards } from '@nestjs/common';
+import {
+    BadRequestException,
+    Body,
+    Controller,
+    Get,
+    Inject,
+    InternalServerErrorException,
+    Post,
+    Request,
+    UseGuards,
+} from '@nestjs/common';
 import { LocalPassportAuthGuard } from '../../guards/LocalPassport.guard';
-import { Request as Req, Response as Res } from 'express';
+import { Request as Req } from 'express';
 import { AuthService } from '../../services/auth/auth.service';
 import { AccessJwtPassportAuthGuard } from '../../guards/AccessJwtPassport.guard';
 import { AnyJwtPassportAuthGuard } from '../../guards/AnyJwtPassport.guard';
 import { RefreshJwtPassportAuthGuard } from '../../guards/RefreshJwtPassport.guard';
 import { TokenService } from '../../services/token/token.service';
 import VerifyTokenDto from '../../dtos/VerifyToken.dto';
-import { TokenType } from '../../types';
+import { SignInData, TokenType } from '../../types';
 
 @Controller('auth')
 export class AuthController {
@@ -19,7 +29,7 @@ export class AuthController {
     @UseGuards(LocalPassportAuthGuard)
     @Post('login')
     async login(@Request() req: Req): Promise<any> {
-        return this.authService.signIn(req.user as any); //TODO ?
+        return this.authService.signIn(req.user as SignInData);
     }
 
     @UseGuards(AccessJwtPassportAuthGuard)
@@ -34,13 +44,13 @@ export class AuthController {
         const token = req.headers.authorization?.split(' ')[1];
         if (!token) throw new Error('Token is required');
 
-        const accessToken = this.tokenService.regenerateAccessToken(token).catch(e => {
+        const accessToken = await this.tokenService.regenerateAccessToken(token).catch((e: Error) => {
             throw new InternalServerErrorException(`Error regenerating access token: ${e.message}`);
-        })
+        });
 
         return {
-            accessToken
-        }
+            accessToken,
+        };
     }
 
     @Post('verify')
@@ -53,38 +63,15 @@ export class AuthController {
         if (type === TokenType.REFRESH) isValid = await this.tokenService.isRefreshTokenValid(token);
 
         return {
-            isValid
-        }
+            isValid,
+        };
     }
 
     @UseGuards(AnyJwtPassportAuthGuard)
     @Post('logout')
     async logout(@Request() req: Req): Promise<any> {
-        // const token = req.headers.authorization?.split(' ')[1];
-        // if (!token) throw new BadRequestException('Token is required');
-
-        // if (await this.tokenService.isAccessTokenValid(token)) {
-        //     await this.tokenService.removeAccessToken(token)
-        //     return {
-        //         message: 'Logged out successfully',
-        //         tokenType: TokenType.ACCESS
-        //     }
-        // }
-
-        // if (await this.tokenService.isRefreshTokenValid(token)) {
-        //     await this.tokenService.removeRefreshToken(token)
-        //     return {
-        //         message: 'Logged out successfully',
-        //         tokenType: TokenType.REFRESH
-        //     }
-        // }
-
-        // throw new BadRequestException('Token is not valid');
-        const userId = (req.user as any).userId;
-        if(!userId) throw new BadRequestException('Not logged in');
-
-        this.tokenService.removeUserTokens(userId)
-        return 
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) throw new BadRequestException('Token is required');
+        return this.tokenService.destroyRelatedTokens(token);
     }
-
 }
