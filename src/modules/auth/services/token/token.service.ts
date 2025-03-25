@@ -308,20 +308,30 @@ export class TokenService {
     /**
      * Removes all tokens (access and refresh) associated with the provided user ID.
      * @param userId The user ID whose tokens should be removed.
+     * @returns true
+     * @throws InternalServerErrorException if something went wrong while removing tokens.
      */
     async removeUserTokens(userId: string): Promise<boolean> {
         const refreshTokens = await this.refreshTokenRepository.find({ where: { userId } });
-        if (refreshTokens.length > 0) await this.refreshTokenRepository.remove(refreshTokens);
+        if (refreshTokens.length > 0) await this.refreshTokenRepository.remove(refreshTokens).catch((e) => {
+            throw new InternalServerErrorException('Something went wrong while removing refresh tokens');
+        });
 
         // Access tokens should be removed when refresh tokens are removed (cascade delete)
         // Only safety check
         const accessTokens = await this.accessTokenRepository.find({ where: { userId } });
-        if (accessTokens.length > 0) await this.accessTokenRepository.remove(accessTokens);
+        if (accessTokens.length > 0) await this.accessTokenRepository.remove(accessTokens).catch((e) => {
+            throw new InternalServerErrorException('Something went wrong while removing access tokens');
+        });
 
         return true; //TODO: Opis i testy
     }
 
-    //TODO: Opis i testy
+    /**
+     * Removes the refresh token from the database.
+     * @param refreshToken The refresh token to remove.
+     * @returns True if the refresh token was removed, false otherwise.
+     */
     async removeRefreshToken(refreshToken: string): Promise<boolean> {
         const refreshTokenHash = this.hashToken(refreshToken);
         return this.removeRefreshTokenByHash(refreshTokenHash);
@@ -335,15 +345,26 @@ export class TokenService {
     async removeRefreshTokenByHash(refreshTokenHash: string): Promise<boolean> {
         const refreshToken = await this.getRefreshTokenByHash(refreshTokenHash);
         if (!refreshToken) return false;
-        await this.refreshTokenRepository.remove(refreshToken);
+        await this.refreshTokenRepository.remove(refreshToken).catch((e) => {
+            throw new InternalServerErrorException('Something went wrong while removing refresh token');
+        });
 
         // Related access tokens should be removed when refresh tokens are removed (cascade delete)
         // Only safety check
-        // await this.accessTokenRepository.delete({ relatedRefreshToken: refreshToken }); //TODO: To generuje błędy, do sprawdzenia
+        // await this.accessTokenRepository.delete({ relatedRefreshToken: refreshToken }); 
+        // //TODO: To generuje błędy, do sprawdzenia
+        const remainingAccessTokens = await this.accessTokenRepository.find({ where: { relatedRefreshToken: refreshToken } });
+        if (remainingAccessTokens.length > 0) await this.accessTokenRepository.remove(remainingAccessTokens).catch((e) => {
+            throw new InternalServerErrorException('Something went wrong while removing access tokens');
+        });
         return true;
     }
 
-    // TODO: Opis i testy
+    /**
+     * Removes the access token from the database.
+     * @param accessToken The access token to remove.
+     * @returns True if the access token was removed, false otherwise.
+     */
     async removeAccessToken(accessToken: string): Promise<boolean> {
         const accessTokenHash = this.hashToken(accessToken);
         return this.removeAccessTokenByHash(accessTokenHash);

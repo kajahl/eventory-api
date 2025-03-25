@@ -547,27 +547,45 @@ describe('TokenService', () => {
             jest.spyOn(refreshTokenRepository, 'remove').mockResolvedValue({} as any);
             jest.spyOn(accessTokenRepository, 'remove').mockResolvedValue({} as any);
 
-            await service['removeUserTokens'](userId);
+            const result = await service['removeUserTokens'](userId);
 
             expect(refreshTokenRepository.find).toHaveBeenCalledWith({ where: { userId } });
             expect(accessTokenRepository.find).toHaveBeenCalledWith({ where: { userId } });
             expect(refreshTokenRepository.remove).toHaveBeenCalledWith([mockRefreshTokenEntity]);
             expect(accessTokenRepository.remove).toHaveBeenCalledWith([mockAccessTokenEntity]);
+            expect(result).toBe(true);
         });
 
-        it('should return false if tokens are not found', async () => {
+        it('should return not call methods if tokens are not found', async () => {
             const userId = 'user-id';
             jest.spyOn(refreshTokenRepository, 'find').mockResolvedValue([]);
             jest.spyOn(accessTokenRepository, 'find').mockResolvedValue([]);
             jest.spyOn(refreshTokenRepository, 'remove');
             jest.spyOn(accessTokenRepository, 'remove');
 
-            await service['removeUserTokens'](userId);
+            const result = await service['removeUserTokens'](userId);
 
             expect(refreshTokenRepository.find).toHaveBeenCalledWith({ where: { userId } });
             expect(accessTokenRepository.find).toHaveBeenCalledWith({ where: { userId } });
             expect(refreshTokenRepository.remove).not.toHaveBeenCalled();
             expect(accessTokenRepository.remove).not.toHaveBeenCalled();
+            expect(result).toBe(true);
+        });
+    });
+    
+    describe('removeRefreshToken', () => {
+        it('should use hashToken and call removeRefreshTokenByHash', async () => {
+            const hashedToken = 'hashed-token';
+            const refreshToken = 'mock-refresh-token';
+
+            jest.spyOn(service as any, 'hashToken').mockReturnValue(hashedToken);
+            jest.spyOn(service as any, 'removeRefreshTokenByHash').mockResolvedValue(true);
+
+            const result = await service['removeRefreshToken'](refreshToken);
+
+            expect(service['hashToken']).toHaveBeenCalledWith(refreshToken);
+            expect(service['removeRefreshTokenByHash']).toHaveBeenCalledWith(hashedToken);
+            expect(result).toBe(true);
         });
     });
 
@@ -577,14 +595,43 @@ describe('TokenService', () => {
             const mockRefreshTokenEntity = { id: 1 } as any as RefreshTokenEntity;
             jest.spyOn(service as any, 'getRefreshTokenByHash').mockResolvedValue(mockRefreshTokenEntity);
             jest.spyOn(refreshTokenRepository, 'remove').mockResolvedValue({} as any);
-            jest.spyOn(accessTokenRepository, 'delete').mockResolvedValue({} as any);
+            jest.spyOn(accessTokenRepository, 'find').mockResolvedValue(["remaining"] as any);
+            jest.spyOn(accessTokenRepository, 'remove').mockResolvedValue({} as any);
 
             const result = await service['removeRefreshTokenByHash'](hashedToken);
 
             expect(service['getRefreshTokenByHash']).toHaveBeenCalledWith(hashedToken);
             expect(refreshTokenRepository.remove).toHaveBeenCalledWith(mockRefreshTokenEntity);
-            expect(accessTokenRepository.delete).toHaveBeenCalledWith({ relatedRefreshToken: mockRefreshTokenEntity });
+            expect(accessTokenRepository.find).toHaveBeenCalledWith({ where: { relatedRefreshToken: mockRefreshTokenEntity } });
+            expect(accessTokenRepository.remove).toHaveBeenCalledWith(["remaining"]);
             expect(result).toBe(true);
+        });
+
+        it('should throw error if something went wrong while removing refresh token', async () => {
+            const hashedToken = 'hashed-token';
+            const mockRefreshTokenEntity = { id: 1 } as any as RefreshTokenEntity;
+            jest.spyOn(service as any, 'getRefreshTokenByHash').mockResolvedValue(mockRefreshTokenEntity);
+            jest.spyOn(refreshTokenRepository, 'remove').mockRejectedValue(new Error('Database error'));
+
+            await expect(() => service['removeRefreshTokenByHash'](hashedToken)).rejects.toThrow('Something went wrong while removing refresh token');
+            expect(service['getRefreshTokenByHash']).toHaveBeenCalledWith(hashedToken);
+            expect(refreshTokenRepository.remove).toHaveBeenCalledWith(mockRefreshTokenEntity);
+        });
+
+        it('should throw error if something went wrong while removing remaining access tokens', async () => {
+            const hashedToken = 'hashed-token';
+            const mockRefreshTokenEntity = { id: 1 } as any as RefreshTokenEntity;
+            jest.spyOn(service as any, 'getRefreshTokenByHash').mockResolvedValue(mockRefreshTokenEntity);
+            jest.spyOn(refreshTokenRepository, 'remove').mockResolvedValue({} as any);
+            jest.spyOn(accessTokenRepository, 'find').mockResolvedValue(["remaining"] as any);
+            jest.spyOn(accessTokenRepository, 'remove').mockRejectedValue(new Error('Database error'));
+
+            await expect(() => service['removeRefreshTokenByHash'](hashedToken)).rejects.toThrow('Something went wrong while removing access tokens');
+
+            expect(service['getRefreshTokenByHash']).toHaveBeenCalledWith(hashedToken);
+            expect(refreshTokenRepository.remove).toHaveBeenCalledWith(mockRefreshTokenEntity);
+            expect(accessTokenRepository.find).toHaveBeenCalledWith({ where: { relatedRefreshToken: mockRefreshTokenEntity } });
+            expect(accessTokenRepository.remove).toHaveBeenCalledWith(["remaining"]);
         });
 
         it('should return false if refresh token is not found', async () => {
@@ -597,6 +644,22 @@ describe('TokenService', () => {
             expect(service['getRefreshTokenByHash']).toHaveBeenCalledWith(hashedToken);
             expect(refreshTokenRepository.remove).not.toHaveBeenCalled();
             expect(result).toBe(false);
+        });
+    });
+
+    describe('removeAccessToken', () => {
+        it('should use hashToken and call removeAccessTokenByHash', async () => {
+            const hashedToken = 'hashed-token';
+            const accessToken = 'mock-access-token';
+
+            jest.spyOn(service as any, 'hashToken').mockReturnValue(hashedToken);
+            jest.spyOn(service as any, 'removeAccessTokenByHash').mockResolvedValue(true);
+
+            const result = await service['removeAccessToken'](accessToken);
+
+            expect(service['hashToken']).toHaveBeenCalledWith(accessToken);
+            expect(service['removeAccessTokenByHash']).toHaveBeenCalledWith(hashedToken);
+            expect(result).toBe(true);
         });
     });
 
