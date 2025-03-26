@@ -20,7 +20,7 @@ export class AccessJwtStrategy extends PassportStrategy(Strategy, 'access-jwt') 
     async validate(req: Request, payload: JwtPayload): Promise<SignInData> {
         const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
         if(!token) throw new UnauthorizedException('Token not found in request');
-        const isValid = this.tokenService.isAccessTokenValid(token);
+        const isValid = await this.tokenService.isAccessTokenValid(token);
         if (!isValid) throw new UnauthorizedException('Invalid access token');
 
         return {

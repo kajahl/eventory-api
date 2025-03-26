@@ -20,7 +20,7 @@ export class RefreshJwtStrategy extends PassportStrategy(Strategy, 'refresh-jwt'
     async validate(req: Request, payload: JwtPayload): Promise<SignInData> {
         const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
         if(!token) throw new UnauthorizedException('Token not found in request');
-        const isValid = this.tokenService.isRefreshTokenValid(token);
+        const isValid = await this.tokenService.isRefreshTokenValid(token);
         if (!isValid) throw new UnauthorizedException('Invalid refresh token');
 
         return {
