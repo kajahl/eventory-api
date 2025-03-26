@@ -1,4 +1,10 @@
-import { BadRequestException, ConsoleLogger, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import {
+    BadRequestException,
+    ConsoleLogger,
+    Injectable,
+    InternalServerErrorException,
+    UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,7 +12,7 @@ import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { RefreshTokenEntity } from '../../entities/RefreshToken.entity';
 import { AccessTokenEntity } from '../../entities/AccessToken.entity';
-import { JwtPayload } from '../../types';
+import { JwtPayload, TokenType } from '../../types';
 
 @Injectable()
 export class TokenService {
@@ -16,8 +22,8 @@ export class TokenService {
         @InjectRepository(RefreshTokenEntity) private readonly refreshTokenRepository: Repository<RefreshTokenEntity>,
         @InjectRepository(AccessTokenEntity) private readonly accessTokenRepository: Repository<AccessTokenEntity>,
     ) {}
-    
-    // Config 
+
+    // Config
 
     /**
      * Get the secret key for signing JWT access tokens.
@@ -56,7 +62,8 @@ export class TokenService {
      * @param token The token to hash.
      * @returns The hashed token as a hexadecimal string.
      */
-    private hashToken(token: string): string {
+    hashToken(token: string): string {
+        // Changed from private to public
         return crypto.createHash('sha256').update(token).digest('hex');
     }
 
@@ -138,7 +145,7 @@ export class TokenService {
             await this.saveAccessToken(payload.sub, accessToken, expiresAt, relatedRefreshToken);
             return accessToken;
         } catch (error) {
-            if(error instanceof BadRequestException) throw error;
+            if (error instanceof BadRequestException) throw error;
 
             console.error(error);
             throw new InternalServerErrorException('Something went wrong while generating access token');
@@ -180,8 +187,8 @@ export class TokenService {
      * @returns The access token entity if found, otherwise null.
      */
     private async getAccessTokenByHash(hash: string): Promise<AccessTokenEntity | null> {
-        const accessToken = await this.accessTokenRepository.findOne({ 
-            where: { tokenHash: hash } ,
+        const accessToken = await this.accessTokenRepository.findOne({
+            where: { tokenHash: hash },
             relations: { relatedRefreshToken: true },
         });
         return accessToken || null;
@@ -193,11 +200,39 @@ export class TokenService {
      * @returns The refresh token entity if found, otherwise null.
      */
     private async getRefreshTokenByHash(hash: string): Promise<RefreshTokenEntity | null> {
-        const refreshToken = await this.refreshTokenRepository.findOne({ 
+        const refreshToken = await this.refreshTokenRepository.findOne({
             where: { tokenHash: hash },
             relations: { accessTokens: true },
-         });
+        });
         return refreshToken || null;
+    }
+
+    // Public getters
+
+    async getUserRefreshTokens(userId: string): Promise<RefreshTokenEntity[]> {
+        const refreshTokens = await this.refreshTokenRepository.find({ where: { userId } });
+        return refreshTokens || null;
+    }
+
+    async getRelatedRefreshTokenIdByAccessToken(accessToken: string): Promise<string | null> {
+        const accessTokenRecord = await this.getAccessTokenByHash(this.hashToken(accessToken));
+        if (!accessTokenRecord) return null;
+        const relatedRefreshToken = accessTokenRecord.relatedRefreshToken;
+        if (!relatedRefreshToken) return null;
+        return relatedRefreshToken.id;
+    }
+
+    // Checks
+
+    async isUserOwnerOfTokenId(userId: string, tokenType: TokenType, tokenId: string): Promise<boolean> {
+        const tokenEntity =
+            tokenType === TokenType.ACCESS
+                ? await this.accessTokenRepository.findOne({ where: { id: tokenId } })
+                : await this.refreshTokenRepository.findOne({ where: { id: tokenId } });
+
+        if (!tokenEntity) return false;
+        if (tokenEntity.userId !== userId) return false;
+        return true;
     }
 
     // Save
@@ -319,16 +354,18 @@ export class TokenService {
      */
     async removeUserTokens(userId: string): Promise<boolean> {
         const refreshTokens = await this.refreshTokenRepository.find({ where: { userId } });
-        if (refreshTokens.length > 0) await this.refreshTokenRepository.remove(refreshTokens).catch((e) => {
-            throw new InternalServerErrorException('Something went wrong while removing refresh tokens');
-        });
+        if (refreshTokens.length > 0)
+            await this.refreshTokenRepository.remove(refreshTokens).catch((e) => {
+                throw new InternalServerErrorException('Something went wrong while removing refresh tokens');
+            });
 
         // Access tokens should be removed when refresh tokens are removed (cascade delete)
         // Only safety check
         const accessTokens = await this.accessTokenRepository.find({ where: { userId } });
-        if (accessTokens.length > 0) await this.accessTokenRepository.remove(accessTokens).catch((e) => {
-            throw new InternalServerErrorException('Something went wrong while removing access tokens');
-        });
+        if (accessTokens.length > 0)
+            await this.accessTokenRepository.remove(accessTokens).catch((e) => {
+                throw new InternalServerErrorException('Something went wrong while removing access tokens');
+            });
 
         return true;
     }
@@ -357,11 +394,25 @@ export class TokenService {
 
         // Related access tokens should be removed when refresh tokens are removed (cascade delete)
         // Only safety check
-        const remainingAccessTokens = await this.accessTokenRepository.find({ where: { relatedRefreshToken: refreshToken } });
-        if (remainingAccessTokens.length > 0) await this.accessTokenRepository.remove(remainingAccessTokens).catch((e) => {
-            throw new InternalServerErrorException('Something went wrong while removing access tokens');
+        const remainingAccessTokens = await this.accessTokenRepository.find({
+            where: { relatedRefreshToken: refreshToken },
         });
+        if (remainingAccessTokens.length > 0)
+            await this.accessTokenRepository.remove(remainingAccessTokens).catch((e) => {
+                throw new InternalServerErrorException('Something went wrong while removing access tokens');
+            });
         return true;
+    }
+
+    /**
+     *  Removes the refresh token from the database by its ID.
+     * @param refreshTokenId The ID of the refresh token to remove.
+     * @returns True if the refresh token was removed, false otherwise.
+     */
+    async removeRefreshTokenById(refreshTokenId: string): Promise<boolean> {
+        const refreshToken = await this.refreshTokenRepository.findOne({ where: { id: refreshTokenId } });
+        if (!refreshToken) return false;
+        return this.removeRefreshTokenByHash(refreshToken.tokenHash);
     }
 
     /**
@@ -382,17 +433,22 @@ export class TokenService {
     async removeAccessTokenByHash(accessTokenHash: string): Promise<boolean> {
         const accessToken = await this.getAccessTokenByHash(accessTokenHash);
         if (!accessToken) return false;
-        await this.accessTokenRepository.remove(accessToken)
+        await this.accessTokenRepository.remove(accessToken);
         return true;
     }
 
+    /**
+     * Destroys the related tokens (access and refresh) associated with the provided token.
+     * @param anyToken  The token to use for finding related tokens.
+     * @returns True if the related tokens were destroyed, false otherwise.
+     */
     async destroyRelatedTokens(anyToken: string) {
         const tokenHash = this.hashToken(anyToken);
 
         const accessToken = await this.getAccessTokenByHash(tokenHash);
         if (accessToken) {
             const relatedRefreshToken = accessToken.relatedRefreshToken;
-            if(!relatedRefreshToken) throw new InternalServerErrorException('Related refresh token not found');
+            if (!relatedRefreshToken) throw new InternalServerErrorException('Related refresh token not found');
             return this.removeRefreshTokenByHash(relatedRefreshToken.tokenHash);
         }
 

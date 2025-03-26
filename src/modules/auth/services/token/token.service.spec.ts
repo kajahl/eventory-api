@@ -303,6 +303,18 @@ describe('TokenService', () => {
         });
     });
 
+    describe('getUserRefreshTokens', () => {
+        // TODO
+    })
+
+    describe('getRelatedRefreshTokenIdByAccessToken', () => {
+        // TODO
+    })
+
+    describe('isUserOwnerOfTokenId', () => {
+        // TODO
+    })
+
     describe('saveAccessToken', () => {
         it('should save the access token to the database', async () => {
             const userId = 'user-id';
@@ -648,6 +660,10 @@ describe('TokenService', () => {
             expect(result).toBe(false);
         });
     });
+
+    describe('removeRefreshTokenById', () => {
+        // TODO
+    })
 
     describe('removeAccessToken', () => {
         it('should use hashToken and call removeAccessTokenByHash', async () => {
