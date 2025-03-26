@@ -24,7 +24,7 @@ export default class UserEntity {
 
     @Expose()
     get isEmailConfirmed(): boolean {
-        return this.pendingEmail !== undefined && this.email !== this.pendingEmail;
+        return this.email !== this.pendingEmail;
     }
 
     @Exclude()
@@ -42,7 +42,7 @@ export default class UserEntity {
 
     @Expose()
     get isEmailChangeRequested(): boolean {
-        return this.pendingEmail !== undefined;
+        return this.pendingEmail?.length !== 0 && this.email !== this.pendingEmail;
     }
 
     @Column({ name: 'password' })
