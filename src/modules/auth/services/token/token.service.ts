@@ -46,7 +46,7 @@ export class TokenService {
      * @returns The expiration time for JWT access tokens.
      */
     get AccessTokenExpirationTime(): string {
-        return this.configService.get<string>('JWT_EXPIRATION_TIME', '5m');
+        return this.configService.get<string>('JWT_ACCESS_EXPIRATION', '5m');
     }
 
     /**
@@ -54,7 +54,7 @@ export class TokenService {
      * @returns The expiration time for JWT refresh tokens.
      */
     get RefreshTokenExpirationTime(): string {
-        return this.configService.get<string>('JWT_EXPIRATION_TIME', '7d');
+        return this.configService.get<string>('JWT_REFRESH_EXPIRATION', '7d');
     }
 
     /**
