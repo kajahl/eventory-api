@@ -7,7 +7,6 @@ import {
     ForbiddenException,
     Get,
     Inject,
-    InternalServerErrorException,
     Param,
     Post,
     Request,
@@ -24,6 +23,7 @@ import { TokenService } from '../../services/token/token.service';
 import VerifyTokenDto from '../../dtos/VerifyToken.dto';
 import { SignInData, TokenType } from '../../types';
 import { UsersService } from 'src/modules/users/services/users/users.service';
+import { User } from 'src/common/decorators/User.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -105,7 +105,10 @@ export class AuthController {
 
     @UseGuards(RefreshJwtPassportAuthGuard)
     @Post('token')
-    async renewAccessToken(@Request() req: Req): Promise<any> {
+    async renewAccessToken(
+        @User() user: SignInData,
+        @Request() req: Req
+    ): Promise<any> {
         const token = req.headers.authorization?.split(' ')[1];
         if (!token) throw new Error('Token is required');
 
@@ -113,6 +116,10 @@ export class AuthController {
 
         return {
             accessToken,
+            user: {
+                sub: user.userId,
+                timestamp: user.timestamp //Timestamp utworzenia sesji
+            }
         };
     }
 
