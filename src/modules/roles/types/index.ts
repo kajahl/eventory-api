@@ -18,8 +18,8 @@ export enum Scope {
     // Roles
     RolesRead = 'roles:read',
     RolesReadMe = 'roles:read:me',
-    RolesReadUsers = 'role:read:users',
-    RolesManage = 'role:manage',
+    RolesReadUsers = 'roles:read:users',
+    RolesManage = 'roles:manage',
 
     // Events
     EventsRead = 'events:read',
