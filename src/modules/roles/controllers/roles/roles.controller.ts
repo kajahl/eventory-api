@@ -79,7 +79,7 @@ export class RolesController {
             if (!confirm)
                 throw new BadRequestException(`Are you trying to assign role to yourself? Use ?confirm=true to confirm`);
         }
-        const user = await this.userRolesService.assingRoleToUser(userId, role);
+        const user = await this.userRolesService.assignRoleToUser(userId, role);
         return user;
     }
 

@@ -23,7 +23,7 @@ export class UserRolesService {
      * @throws BadRequestException if user already has this role
      * @throws NotFoundException if user or role not found
      */
-    async assingRoleToUser(userId: string, role: Role): Promise<boolean> {
+    async assignRoleToUser(userId: string, role: Role): Promise<boolean> {
         const userEntity = await this.usersService.getById(userId);
         const roleEntity = await this.rolesService.getRole(role);
 
