@@ -1,5 +1,6 @@
 import { Exclude, Expose } from 'class-transformer';
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { UserRoleEntity } from 'src/modules/roles/entities/UserRole.entity';
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('users')
 export default class UserEntity {
@@ -63,4 +64,7 @@ export default class UserEntity {
     get fullName(): string {
         return `${this.firstname} ${this.lastname}`;
     }
+
+    @OneToMany(() => UserRoleEntity, (userRole) => userRole.user)
+    userRoles: UserRoleEntity[];
 }

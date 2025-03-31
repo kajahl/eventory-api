@@ -9,6 +9,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { RefreshTokenEntity } from './modules/auth/entities/RefreshToken.entity';
 import { AccessTokenEntity } from './modules/auth/entities/AccessToken.entity';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RolesModule } from './modules/roles/roles.module';
+import { RoleEntity } from './modules/roles/entities/Role.entity';
+import { UserRoleEntity } from './modules/roles/entities/UserRole.entity';
 
 @Module({
   imports: [
@@ -29,6 +32,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         synchronize: configService.get<boolean>('DATABASE_SYNCHRONIZE'),
         entities: [
             UserEntity,
+            RoleEntity, UserRoleEntity,
             RefreshTokenEntity, AccessTokenEntity
         ],
       }),
@@ -37,7 +41,8 @@ import { ScheduleModule } from '@nestjs/schedule';
         cronJobs: true
     }),
     UsersModule,
-    AuthModule
+    AuthModule,
+    RolesModule
   ],
   controllers: [AppController],
   providers: [AppService],
