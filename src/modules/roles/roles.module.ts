@@ -16,7 +16,7 @@ import { AuthModule } from '../auth/auth.module';
     ],
     providers: [RolesService, UserRolesService],
     controllers: [RolesController],
-    exports: [RolesService],
+    exports: [RolesService, UserRolesService],
 })
 export class RolesModule implements OnModuleInit {
     constructor(
