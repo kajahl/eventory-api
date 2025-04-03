@@ -17,6 +17,11 @@ export class UsersService {
         @Inject(EmailService) private readonly emailService: EmailService,
     ) {}
 
+    /**
+     * Create a new user
+     * @param createUserDto CreateUserDto
+     * @returns UserEntity
+     */
     async createUser(createUserDto: CreateUserDto): Promise<UserEntity> {
         const { password, confirm_password, email, confirm_email, firstname, lastname } = createUserDto;
 
@@ -42,29 +47,61 @@ export class UsersService {
         return savedUser;
     }
 
+    /**
+     * Get all users
+     * @returns UserEntity[]
+     */
     async getAll(): Promise<UserEntity[]> {
         const users = await this.userRepository.find();
         return users;
     }
 
+    /**
+     * Get user by ID
+     * @param id User ID
+     * @returns UserEntity
+     * @throws NotFoundException if user not found
+     */
     async getById(id: string): Promise<UserEntity> {
         const user = await this.userRepository.findOne({ where: { id } });
         if (!user) throw new NotFoundException(`User with ID ${id} not found`);
         return user;
     }
 
+    /**
+     * Get user by email
+     * @param email User email
+     * @returns UserEntity
+     * @throws NotFoundException if user not found
+     */
     async getByEmail(email: string): Promise<UserEntity> {
         const user = await this.userRepository.findOne({ where: { email } });
         if (!user) throw new NotFoundException(`User with email ${email} not found`);
         return user;
     }
 
+    /**
+     * Find user by partial data
+     * @param user Partial user data or array of partial user data
+     * @returns UserEntity | null
+     */
     async find(user: Partial<UserEntity> | Partial<UserEntity>[]): Promise<UserEntity | null> {
         const found = this.userRepository.findOne({ where: user });
-        if (!found) throw new NotFoundException(`User not found`);
         return found;
     }
 
+    /**
+     * Update user by ID
+     * @param id User ID
+     * @param updateUserDto UpdateUserDto
+     * @returns UserEntity
+     * @throws NotFoundException if user not found
+     * @throws BadRequestException if email or password is invalid
+     * @throws BadRequestException if email is already taken
+     * @throws BadRequestException if email and confirm email do not match
+     * @throws BadRequestException if password and confirm password do not match
+     * @throws BadRequestException if password is too weak
+     */
     async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<UserEntity> {
         const user = await this.getById(id);
         const { email, confirm_email } = updateUserDto;
@@ -92,8 +129,15 @@ export class UsersService {
         return savedUser;
     }
 
-    async deleteUser(id: string): Promise<void> {
+    /**
+     * Delete user by ID
+     * @param id User ID
+     * @returns boolean
+     * @throws NotFoundException if user not found
+     */
+    async deleteUser(id: string): Promise<boolean> {
         const user = await this.getById(id);
         await this.userRepository.remove(user);
+        return true;
     }
 }
