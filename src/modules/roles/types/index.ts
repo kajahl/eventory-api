@@ -14,6 +14,10 @@ export enum Scope {
     // Users
     UsersRead = 'users:read',
     UsersReadMe = 'users:read:me',
+    UsersUpdate = 'users:update',
+    UsersUpdateMe = 'users:update:me',
+    UsersDelete = 'users:delete',
+    UsersDeleteMe = 'users:delete:me',
 
     // Roles
     RolesRead = 'roles:read',
@@ -27,8 +31,14 @@ export enum Scope {
     EventsCreate = 'events:create',
     EventsUpdate = 'events:update',
     EventsDelete = 'events:delete',
+    EventsJoinStrategiesRead = 'events:join:strategies:read',
+    EventsJoinStrategiesManage = 'events:join:strategies:manage',
     EventsUsersManage = 'events:users:manage',
     EventsUsersManageMe = 'events:users:manage:me',
+    EventsEnable = 'events:enable',
+    EventsDisable = 'events:disable',
+    EventsJoin = 'events:join',
+    EventsLeave = 'events:leave',
 }
 
 function allScopes() : Scope[] {
@@ -38,22 +48,27 @@ function allScopes() : Scope[] {
 function getEventCreatorScopes(): Scope[] {
     return [
         Scope.EventsRead,
-        Scope.EventsReadMe,
         Scope.EventsCreate,
         Scope.EventsUpdate,
         Scope.EventsDelete,
         Scope.EventsUsersManage,
-        Scope.EventsUsersManageMe,
-        ...getUserScopes(),
+        Scope.EventsJoinStrategiesRead,
+        Scope.EventsJoinStrategiesManage,
+        Scope.EventsEnable,
+        Scope.EventsDisable
     ];
 }
 
 function getUserScopes(): Scope[] {
     return [
-        Scope.UsersRead,
         Scope.UsersReadMe,
+        Scope.UsersUpdateMe,
+        Scope.UsersDeleteMe,
         Scope.EventsRead,
         Scope.EventsReadMe,
+        Scope.EventsUsersManageMe,
+        Scope.EventsJoin,
+        Scope.EventsLeave,
     ];
 }
 
