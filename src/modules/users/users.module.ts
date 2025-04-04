@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { UsersService } from './services/users/users.service';
 import { UsersController } from './controllers/users/users.controller';
 import { PasswordService } from './services/password/password.service';
@@ -7,9 +7,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import UserEntity from './entities/user.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { RolesModule } from '../roles/roles.module';
 
 @Module({
     imports: [
+        forwardRef(() => RolesModule),
         TypeOrmModule.forFeature([UserEntity]),
         JwtModule.registerAsync({
             imports: [ConfigModule],
